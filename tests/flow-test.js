@@ -46,6 +46,7 @@ describe('flow.serial', () => {
         expect(spyCb.calledWith(null, 2)).to.be.true;
         expect(spy1.calledWith(0)).to.be.true;
         expect(spy2.calledWith(1)).to.be.true;
+        expect(spy2.calledAfter(spy1)).to.be.true;
     });
 
     it('should call callback with error only once', () => {
