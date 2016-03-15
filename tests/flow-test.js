@@ -21,42 +21,51 @@ describe('flow.serial', () => {
                 cb('err');
             }
         ],
-        (err, res) => {
+        (err) => {
             expect(err).to.equal('err');
         });
     });
 
     it('should transmit data to the next function', () => {
+        let spy1 = sinon.spy((n, cb) => {
+            cb(null, ++n);
+        });
+        let spy2 = sinon.spy((n, cb) => {
+            cb(null, ++n);
+        });
+        let spyCb = sinon.spy((err, res) => {});
         flow.serial([
             (cb) => {
                 cb(null, 0);
             },
-            (n, cb) => {
-                cb(null, ++n);
-            },
-            (n, cb) => {
-                cb(null, ++n);
-            }
+            spy1,
+            spy2
         ],
-        (err, res) => {
-            expect(err).to.be.null;
-            expect(res).to.be.equal(2);
-        });
+        spyCb);
+
+        expect(spyCb.calledWith(null, 2)).to.be.true;
+        expect(spy1.calledWith(0)).to.be.true;
+        expect(spy2.calledWith(1)).to.be.true;
     });
 
     it('should call callback with error only once', () => {
-        var spy = sinon.spy((err, data) => {
-            expect(spy.calledOnce).to.be.true;
+        let spyCb = sinon.spy((err, data) => {
+            expect(spyCb.calledOnce).to.be.true;
+            expect(spy1.calledOnce).to.be.true;
+            expect(spy2.called).to.be.false;
+
+        });
+        let spy1 = sinon.spy((cb) => {
+            cb('err');
+        });
+        let spy2 = sinon.spy((cb) => {
+            cb('err');
         });
 
         flow.serial([
-            (cb) => {
-                cb('err');
-            },
-            (data, cb) => {
-                cb('err');
-            }
-        ], spy);
+            spy1,
+            spy2
+        ], spyCb);
     });
 });
 
@@ -66,6 +75,21 @@ describe('flow.parallel', () => {
             expect(err).to.be.null;
             expect(res).to.be.null;
         });
+    });
+
+    it('should call first function', () => {
+        let spy = sinon.spy((cb) => {
+            cb(null, null);
+        });
+        flow.parallel([
+                spy,
+                (cb) => {
+                    cb('err');
+                }
+            ],
+            () => {
+                expect(spy.calledOnce).to.be.true;
+            });
     });
 
     it('should call callback with error', () => {
@@ -83,13 +107,9 @@ describe('flow.parallel', () => {
     });
 
     it('should return array with results of functions', (done) => {
-        var spy = sinon.spy((err, res) => {
+        let spy = sinon.spy((err, res) => {
             expect(err).to.be.null;
-            expect(res).to.be.instanceof(Array);
-            expect(res).to.have.lengthOf(3);
-            expect(res).to.include(0);
-            expect(res).to.include(1);
-            expect(res).to.include(2);
+            expect(res).eql([0, 1, 2]);
             done();
         });
 
@@ -109,7 +129,7 @@ describe('flow.parallel', () => {
     });
 
     it('should call callback with error only once', () => {
-        var spy = sinon.spy();
+        let spy = sinon.spy();
 
         flow.parallel([
             (cb) => {
@@ -133,7 +153,7 @@ describe('flow.map', () => {
     });
 
     it('should call callback with error only once', () => {
-        var spy = sinon.spy((err, data) => {
+        let spy = sinon.spy((err, data) => {
             expect(err).to.exist;
             expect(data).to.not.exist;
             expect(spy.calledOnce).to.be.true;
@@ -146,13 +166,9 @@ describe('flow.map', () => {
     });
 
     it('should return changed array', (done) => {
-        var spy = sinon.spy((err, res) => {
+        let spy = sinon.spy((err, res) => {
             expect(err).to.be.null;
-            expect(res).to.be.instanceof(Array);
-            expect(res).to.have.lengthOf(3);
-            expect(res).to.include(1);
-            expect(res).to.include(2);
-            expect(res).to.include(3);
+            expect(res).eql([1,2,3]);
             done();
         });
 
